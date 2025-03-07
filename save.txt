@@ -1,0 +1,225 @@
+<script setup>
+import { ref, reactive, onMounted } from 'vue';
+import { useAuthStore } from '../../stores/auth';  // Import the auth store for token access
+import { useRoute, useRouter } from 'vue-router';
+import axios from 'axios';
+// import QuestionnaireForm from './QuestionnaireForm.vue';
+// import ImageUploader from '../ImageUploader.vue';
+
+const route = useRoute();
+const router = useRouter();
+
+const eventId = route.params.id;
+
+// Access the auth store
+const authStore = useAuthStore();
+
+// Reactive form data
+const formData = reactive({
+    title: '',
+    description: '',
+    start_date: '',
+    expiration_date: '',
+    subscription_fees: 0,
+    currency: 1,
+    location: '',
+    questionnaires: []
+});
+
+// const state = reactive({
+//     event: {},
+//     isLoading: true
+// })
+
+const loading = ref(false);
+const errorMessage = ref('');
+const successMessage = ref('');
+const currencies = ref([]);
+
+// Show or hide the questionnaire section
+const showQuestionnaire = ref(false);
+
+// Ajouter un questionnaire à l'événement
+const addQuestionnaireToEvent = (questionnaire) => {
+    formData.questionnaires.push(questionnaire);
+};
+
+const fetchEventData = async () => {
+    try {
+        const response = await axios.get('https://jpenielevent.onrender.com/events/' + eventId);
+        events.value = response.data;
+    } catch (error) {
+        console.error('Error fetching the event:', error);
+        errorMessage.value = 'Failed to fetch event data.';
+    } finally {
+        loading.value = false; // Set loading to false after fetching is complete
+    }
+};
+
+// Function to fetch available currencies
+const fetchCurrencies = async () => {
+    try {
+        const response = await axios.get('https://jpenielevent.onrender.com/events/currency/', {
+            headers: {
+                Authorization: `Bearer ${authStore.token}` // Use the token from the store
+            }
+        });
+        currencies.value = response.data; // Store available currencies
+    } catch (error) {
+        console.error('Erreur lors de la récupération des devises:', error.response ? error.response.data : error);
+        errorMessage.value = 'Erreur lors de la récupération des devises.';
+    }
+};
+
+// Fetch currencies on component mount
+onMounted(() => {
+    if (authStore.token) {  // Ensure the token is available
+        fetchCurrencies();
+    } else {
+        errorMessage.value = "Vous devez être connecté pour créer un événement.";
+    }
+});
+
+// Function to submit event data
+const submitEvent = async () => {
+    loading.value = true;
+    errorMessage.value = '';
+    successMessage.value = '';
+
+    // Ensure dates are in ISO format
+    formData.start_date = new Date(formData.start_date).toISOString();
+    formData.expiration_date = new Date(formData.expiration_date).toISOString();
+
+    try {
+        const response = await axios.post('https://jpenielevent.onrender.com/events/create/', {
+            ...formData,
+            currency: formData.currency  // This will be the ID, which is what the backend expects
+        }, {
+            headers: {
+                'Authorization': `Bearer ${authStore.token}`,  // Use the token from the store
+                'Content-Type': 'application/json',
+            },
+        });
+
+        successMessage.value = 'Événement créé avec succès !';
+        console.log('Response:', response.data);  // Log the response data for debugging
+    } catch (error) {
+        errorMessage.value = 'Erreur lors de la création de l\'événement.';
+        console.error('Error creating event:', error.response ? error.response.data : error);
+    } finally {
+        loading.value = false;
+    }
+};
+</script>
+
+<template>
+    <!-- start section -->
+    <section
+        class="extra-big-section background-position-center-bottom background-size-contain background-no-repeat position-relative pt-30px"
+        style="background-image:url('./src/assets/images/demo-travel-agency-home-bg-02.png');">
+        <!-- start section -->
+        <!-- <section class="bg-gradient-very-light-gray"> -->
+        <div class="container pt-15px">
+            <div
+                class="row row-cols-1 row-cols-lg-2 row-cols-md-1 g-0 justify-content-center box-shadow-extra-large border-radius-10px overflow-hidden">
+                <div class="col contact-form-style-04">
+                    <div class="h-100 md-h-450px sm-h-350px w-100 position-relative overflow-hidden">
+                        <img src="../../assets/images/custom/bg-register.png" alt=""
+                            class="h-100 w-100 object-cover object-center">
+                    </div>
+                </div>
+                <div class="col contact-form-style-04">
+                    <div class="p-13 md-p-10 bg-white">
+                        <h3 class="d-inline-block fw-600 text-dark-gray mb-8 ls-minus-1px">Créer un évènement</h3>
+                        <!-- <div class="row">
+                            <div class="col-md-6 ">
+                                <select class="mb-20px bg-very-light-gray form-control">
+                                    <option value="" disabled selected hidden>Choisi un évènement &nbsp; v</option>
+                                    <option value="event 1">Évènement 1</option>
+                                    <option value="event 2">Évènement 2</option>
+                                </select>
+                            </div>
+                        </div> -->
+                        <form @submit.prevent="submitEvent">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <!-- <label class="text-dark-gray mb-10px fw-500">Vontre prénom<span
+                                            class="text-red">*</span></label> -->
+                                    <input id="title" v-model="formData.title"
+                                        class="mb-20px bg-very-light-gray form-control required" type="text"
+                                        name="title" placeholder="Titre de l'évènement" />
+                                </div>
+                                <div class="col-md-6">
+                                    <!-- <label class="text-dark-gray mb-10px fw-500">Votre nom<span
+                                            class="text-red">*</span></label> -->
+                                    <input id="location" v-model="formData.location"
+                                        class="mb-20px bg-very-light-gray form-control required" type="text" name="last"
+                                        placeholder="Lieux de l'évènement" />
+                                </div>
+                                <div class="col-md-6">
+                                    <!-- <label class="text-dark-gray mb-10px fw-500">Adresse email<span
+                                            class="text-red">*</span></label> -->
+                                    <input id="subscription_fees" v-model="formData.subscription_fees"
+                                        class="mb-20px bg-very-light-gray form-control required" type="number"
+                                        name="fees" placeholder="Frais" />
+                                </div>
+                                <div class="col-md-6">
+                                    <select id="currency" v-model="formData.currency"
+                                        class="mb-20px bg-very-light-gray form-control">
+                                        <!-- <option value="" disabled selected hidden>Devis &nbsp; v</option>
+                                        <option value="CAD">CAD</option>
+                                        <option value="USD">USD</option> -->
+                                        <option :value="currency.id" v-for="currency in currencies" :key="currency.id">
+                                            {{ currency.name }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <!-- <label class="text-dark-gray mb-10px fw-500">Vontre prénom<span
+                                            class="text-red">*</span></label> -->
+                                    <input id="start_date" v-model="formData.start_date"
+                                        class="mb-20px bg-very-light-gray form-control required" type="date"
+                                        name="start_date" />
+                                </div>
+                                <div class="col-md-6">
+                                    <!-- <label class="text-dark-gray mb-10px fw-500">Votre nom<span
+                                            class="text-red">*</span></label> -->
+                                    <input id="expiration_date" v-model="formData.expiration_date"
+                                        class="mb-20px bg-very-light-gray form-control required" type="date"
+                                        name="expiration_date" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <textarea id="description" v-model="formData.description"
+                                        class="mb-20px bg-very-light-gray form-control required" cols="40" rows="4"
+                                        name="description" placeholder="Entrer la description de l'évènement" />
+                                </div>
+                                <!-- <div class="position-relative terms-condition-box text-start d-inline-block mb-20px">
+                                <label>
+                                    <input type="checkbox" name="terms_condition" id="terms_condition" value="1"
+                                        class="terms-condition check-box align-middle required">
+                                    <span class="box fs-14">I agree to the terms of service.</span>
+                                </label>
+                            </div> -->
+                                <!-- Inclusion du composant Questionnaire -->
+                                <!-- <QuestionnaireForm @addQuestionnaire="addQuestionnaireToEvent" /> -->
+                                <input type="hidden" name="redirect" value="">
+                                <div class="d-flex justify-content-center align-middle">
+                                    <button class="btn  btn-round-edge btn-dark-gray btn-box-shadow w-90 mb-20px "
+                                        type="submit" :disabled="loading">Modifier l'événement</button>
+                                </div>
+                            </div>
+                            <!-- Error and Success Messages -->
+                            <div v-if="errorMessage" class="text-red-500 mt-2">{{ errorMessage }}</div>
+                            <div v-if="successMessage" class="text-green-500 mt-2">{{ successMessage }}</div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- </section> -->
+        <!-- end section -->
+    </section>
+    <!-- end section -->
+</template>

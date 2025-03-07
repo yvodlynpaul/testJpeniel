@@ -1,0 +1,25 @@
+.mt-n7{
+    margin-top: -5rem !important;
+}
+
+.z-i-2{
+    z-index: 99 !important;
+}
+
+.text-instagram{
+    color: #d32c8b;
+}
+
+.border-radius-4px{
+    border-radius: 0 !important;
+}
+
+.round-edge-sm{
+    border-radius: 7px !important;
+}
+.round-edge-md{
+    border-radius: 10px !important;
+}
+.round-edge-lg{
+    border-radius: 15px !important;
+}
